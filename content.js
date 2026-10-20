@@ -40,9 +40,10 @@ console.log(
 
   // Bump on every change. The popup shows this, so a stale content script
   // (extension reloaded but the tab never refreshed) is obvious at a glance.
-  const BUILD = "build-6";
+  const BUILD = "build-7";
 
   const LISTING_PATH_RE = /\/marketplace\/item\//;
+  const LISTING_ID_RE = /\/marketplace\/item\/(\d+)/;
   const URL_IN_CSS_RE = /url\(\s*(['"]?)([^'")]+)\1\s*\)/i;
 
   // --- step 2: reading the URL out of the CSS value ----------------------
@@ -220,6 +221,8 @@ console.log(
       build: BUILD,
       url: window.location.href,
       isListingPage: LISTING_PATH_RE.test(window.location.pathname),
+      // Keys any user-supplied exact address to this specific listing.
+      listingId: (LISTING_ID_RE.exec(window.location.pathname) || [])[1] || null,
       staticMapFound: !!findStaticMapUrl(),
       locationText: extractLocationText(),
       location: extractListingLocation(),

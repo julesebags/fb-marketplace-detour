@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Marketplace Detour Router</title>
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Marketplace Detour Router</h1>
+    </header>
+
+    <section class="panel">
+      <h2>Listing</h2>
+      <dl id="details" hidden>
+        <div class="row">
+          <dt>Location</dt>
+          <dd id="location-text">&mdash;</dd>
+        </div>
+        <div class="row">
+          <dt>Coordinates</dt>
+          <dd id="coordinates" class="mono">&mdash;</dd>
+        </div>
+        <div class="row">
+          <dt>Approx. radius</dt>
+          <dd id="radius">&mdash;</dd>
+        </div>
+        <div class="row">
+          <dt>Routing to</dt>
+          <dd id="routing-to">&mdash;</dd>
+        </div>
+      </dl>
+
+      <div id="confirm-block" hidden>
+        <div id="confirmed-banner" class="confirmed-banner" hidden>
+          <span id="confirmed-text"></span>
+          <button type="button" id="clear-confirmed" class="link-button">
+            Clear
+          </button>
+        </div>
+        <div class="address-form">
+          <label class="visually-hidden" for="confirm-input">
+            Exact address for this listing
+          </label>
+          <input
+            type="text"
+            id="confirm-input"
+            placeholder="Know the exact address? Set it here"
+            maxlength="200"
+            autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="confirm-suggestions"
+            aria-expanded="false"
+          />
+          <ul
+            id="confirm-suggestions"
+            class="suggestions"
+            role="listbox"
+            aria-label="Address suggestions"
+            hidden
+          ></ul>
+        </div>
+        <p id="confirm-status" class="note" hidden></p>
+      </div>
+
+      <p id="fallback" class="note">Open a listing to see its location.</p>
+      <p id="debug" class="debug" hidden></p>
+    </section>
+
+    <section class="panel">
+      <h2>Driving route</h2>
+
+      <div class="field">
+        <label for="origin-select">From</label>
+        <select id="origin-select"></select>
+      </div>
+
+      <div id="map" class="map"></div>
+      <p id="map-placeholder" class="note map-placeholder">
+        Open a listing and pick a starting point to see routes.
+      </p>
+
+      <p id="route-status" class="note" hidden></p>
+      <ul id="route-list" class="route-list"></ul>
+
+      <div class="next-step">
+        <h3>Listings along this route</h3>
+        <p class="note">Not built yet &mdash; this is the next step.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Your locations</h2>
+
+      <button type="button" id="get-location" class="button">
+        Get current location
+      </button>
+      <p id="geo-status" class="note" hidden></p>
+
+      <div class="address-form">
+        <label class="visually-hidden" for="address-input">Address</label>
+        <input
+          type="text"
+          id="address-input"
+          placeholder="Search for an address"
+          maxlength="200"
+          autocomplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="address-suggestions"
+          aria-expanded="false"
+        />
+        <ul
+          id="address-suggestions"
+          class="suggestions"
+          role="listbox"
+          aria-label="Address suggestions"
+          hidden
+        ></ul>
+      </div>
+      <p id="address-status" class="note" hidden></p>
+
+      <div id="capture" class="capture" hidden>
+        <p id="captured-address">&mdash;</p>
+        <p class="mono coords-line" id="captured-coords">&mdash;</p>
+        <div class="capture-form">
+          <label class="visually-hidden" for="label-input">Label</label>
+          <input
+            type="text"
+            id="label-input"
+            placeholder="Label (e.g. Home)"
+            maxlength="40"
+            autocomplete="off"
+          />
+          <button type="button" id="save-location" class="button" disabled>
+            Save
+          </button>
+        </div>
+      </div>
+
+      <p id="saved-empty" class="note">No saved locations yet.</p>
+      <ul id="saved-list" class="saved-list"></ul>
+    </section>
+
+    <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="config.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
