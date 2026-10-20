@@ -17,6 +17,9 @@
       "run_at": "document_idle"
     }
   ],
-  "host_permissions": ["*://*.facebook.com/*"],
-  "permissions": ["storage"]
+  "host_permissions": [
+    "*://*.facebook.com/*",
+    "https://api.mapbox.com/*"
+  ],
+  "permissions": ["storage", "geolocation"]
 }

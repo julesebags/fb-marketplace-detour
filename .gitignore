@@ -1,0 +1,2 @@
+# Holds the Mapbox access token; copy config.example.js to create it.
+config.js
