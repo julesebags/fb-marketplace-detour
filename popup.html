@@ -7,7 +7,25 @@
   </head>
   <body>
     <h1>Marketplace Detour Router</h1>
-    <p id="status">Routing logic coming soon</p>
+
+    <dl id="details" hidden>
+      <div class="row">
+        <dt>Listing location</dt>
+        <dd id="location-text">&mdash;</dd>
+      </div>
+      <div class="row">
+        <dt>Coordinates</dt>
+        <dd id="coordinates" class="mono">&mdash;</dd>
+      </div>
+      <div class="row">
+        <dt>Approx. radius</dt>
+        <dd id="radius">&mdash;</dd>
+      </div>
+    </dl>
+
+    <p id="fallback">Open a listing to see its location.</p>
+    <p id="debug" class="debug" hidden></p>
+
     <script src="popup.js"></script>
   </body>
 </html>
