@@ -14,8 +14,21 @@
   },
   "content_scripts": [
     {
+      "matches": ["https://www.facebook.com/*"],
+      "js": ["geo-override.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
       "matches": ["*://*.facebook.com/*"],
-      "js": ["content.js"],
+      "js": [
+        "content.js",
+        "feed-scraper.js",
+        "location-modal.js",
+        "worker.js",
+        "sidebar.js"
+      ],
       "run_at": "document_idle"
     }
   ],

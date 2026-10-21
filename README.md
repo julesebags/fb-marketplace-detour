@@ -174,6 +174,132 @@ blindly.
 The "Listings along this route" panel is a deliberate placeholder for the next
 step.
 
+## Hidden worker tab
+
+Refresh does not touch the page you are on. `sidebar.js` sends
+`DETOUR_REFRESH` to `background.js`, which:
+
+1. Resolves coordinates and logs
+   `using lat=… lon=… radius=…km source=constants|saved location`
+2. Opens `facebook.com/marketplace/#detour-geo=<lat>,<lon>` as an inactive tab
+3. Waits for it to load (`geo-override.js` has already spoofed it at
+   `document_start`)
+4. Pings until the content script answers (a tab reporting "complete" is not
+   the same as a content script being ready)
+5. Sends `DETOUR_RUN_WORKER` with the target coordinates; the worker runs
+   steps A–H, verifies the map centre, and scrapes
+6. **Always** closes the tab in a `finally`, including on timeout
+7. Returns `{ ok, listings, error }` to the sidebar
+
+Coordinates are defined in exactly one place, the top of `background.js`:
+`OVERRIDE_LAT`, `OVERRIDE_LON`, `DEFAULT_RADIUS_KM`, plus `USE_SAVED_LOCATION`
+(read the selected saved location instead) and `DEBUG_KEEP_WORKER_TAB` (leave
+the worker tab open and log its id, so its console can be read).
+
+One run at a time; a second Refresh while one is in flight is refused with
+"already running". The whole run is capped at 45 s.
+
+The worker tab loads the same content scripts, so `sidebar.js` asks the
+background `DETOUR_AM_I_WORKER` before mounting and stays headless if the
+answer is yes.
+
+### If the hidden feed comes back empty
+
+Chrome throttles background tabs — timers slow, lazy-loading can stall. Set
+`WORKER_MODE = "unfocused-window"` in `background.js` to use a real but
+unfocused popup window instead, which is not throttled the same way.
+Everything else is identical, including closing the window afterwards.
+
+### Geolocation override
+
+`geo-override.js` runs in the **MAIN** world at `document_start` on every
+`https://www.facebook.com/*` page — but **does nothing unless the tab is
+marked.** Patching from the isolated world would only change what the
+extension sees, not what Facebook's page code sees.
+
+The mark arrives once, as a `#detour-geo=<lat>,<lon>` hash on the URL the
+background opens. At `document_start` the script:
+
+1. parses the hash, stores the coordinates in `sessionStorage`, and strips the
+   marker with `history.replaceState`
+2. otherwise reads `sessionStorage` — absent means a normal tab, so it returns
+   without touching anything
+3. with coordinates, replaces `Geolocation.prototype.getCurrentPosition` and
+   `watchPosition` (and the instance), then logs `[DetourRouter][geo] override
+   active`
+
+`sessionStorage` is per-tab, so the mark survives Facebook's own redirects and
+reloads **inside the worker tab** and is invisible everywhere else.
+
+This replaced a `chrome.scripting.executeScript` injection that ran after the
+tab loaded. That was too late to be reliable — Facebook can capture a reference
+to the real methods during startup. `document_start` lands before any page
+script runs.
+
+### Verifying the spoof took
+
+The modal's map centre is the only evidence the override worked. Step D waits
+for it to land within **0.01°** of the target in both lat and lon (5 s). If the
+centre is already within tolerance, step D passes immediately and locate-me is
+skipped.
+
+On timeout the run **refuses to click Apply**, clicks the dialog's Close button
+and returns
+
+```
+step D: map center never reached target (saw <lat,lon>, wanted <lat,lon>)
+```
+
+which reaches the sidebar status line and the service-worker console. Applying
+anyway would return listings from the wrong place and look like success — the
+exact failure this guards against. For the same reason the worker only scrapes
+when step D passed.
+
+`applyOverriddenLocation()` returns `{ ok, error }` rather than a boolean, so
+every failing step names itself.
+
+### Applying it to Marketplace search
+
+Clicking **Refresh** in the in-page sidebar runs `applyOverriddenLocation()`
+from `location-modal.js`, which drives Facebook's own modal in labelled steps:
+
+| Step | What it does |
+| --- | --- |
+| 0 | Snapshot the first 5 listing ids |
+| A | Click the `· N km` summary button (shortest text = innermost) |
+| B | Wait for `[role="dialog"][aria-label="Change location"]` |
+| C | Read the modal map's centre from its `static_map.php` URL |
+| D | Click locate-me, wait for the centre to move > 0.0001° |
+| E | Set the radius combobox (options are portalled outside the dialog) |
+| F | Click Apply |
+| G | Wait for the dialog to close |
+| H | Wait for the listing ids to change |
+
+Every selector anchors on `role`, `aria-label` or visible text. Facebook's
+generated class names (`x1i10hfl` and friends) are never used — they churn.
+
+`realClick()` dispatches the full `pointerdown → mousedown → pointerup →
+mouseup → click` sequence, because Facebook's buttons are React handlers on
+`div[role="button"]` that a bare `.click()` does not satisfy. It never clicks an
+SVG; the locate-me fallback resolves `.closest('[role="button"]')` first.
+
+`waitFor()` polls and resolves `null` on timeout rather than throwing, so a
+failed step reports its own label instead of aborting the run. Every log is
+prefixed `[DetourRouter]` and names its step.
+
+Steps D and H warn and continue on timeout — an unchanged map centre or an
+unchanged feed is expected when the override already matches the current
+location. Only A, B, D (button missing) and F abort.
+
+### Scope and side effects
+
+- **Only the worker tab is spoofed.** Your own tabs report real coordinates;
+  the override is injected into the short-lived hidden tab and dies with it.
+- **The side panel is unaffected.** It is a `chrome-extension://` page, so
+  "Get current location" still uses real GPS.
+- `watchPosition` reports one fix and then goes quiet; it does not move over
+  time. `clearWatch` is a no-op that accepts the ids `watchPosition` hands out.
+
 ### Known limits
 
 - These are Facebook's **fuzzed** coordinates — the centre of the approximate
@@ -190,6 +316,10 @@ step.
 | `background.js` | Service worker (logs on install) |
 | `sidepanel.html` / `.css` / `.js` | The whole UI: listing info, map, routes, saved locations |
 | `content.js` | Active badge, static-map location extraction, message handler |
+| `feed-scraper.js` | Reads listing cards out of the rendered feed |
+| `location-modal.js` | Drives Facebook's "Change location" modal |
+| `worker.js` | Answers the background worker inside the hidden tab |
+| `sidebar.js` | In-page Shadow DOM sidebar: Refresh + listing cards |
 | `vendor/leaflet/` | Vendored Leaflet 1.9.4 (MV3 forbids CDN scripts) |
 | `config.js` | Mapbox token (gitignored; copy from `config.example.js`) |
 

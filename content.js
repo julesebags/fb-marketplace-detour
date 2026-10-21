@@ -249,6 +249,13 @@ console.log(
   // JS-context dropdown, then run mdrDebug().
   if (typeof window !== "undefined") {
     window.mdrDebug = getListingInfo;
+
+    // Shared with the other isolated-world scripts so location-modal.js can
+    // reuse this static_map.php parsing instead of duplicating it.
+    const NS = (window.DetourRouter = window.DetourRouter || {});
+    NS.staticMapUrlFrom = staticMapUrlFrom;
+    NS.parseStaticMapUrl = parseStaticMapUrl;
+    NS.extractListingLocation = extractListingLocation;
   }
 
   // Test hook: `module` is undefined in a content script, so this is inert in
